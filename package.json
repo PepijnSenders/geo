@@ -1,8 +1,8 @@
 {
-  "name": "static-maps-new",
+  "name": "bek-geo",
   "version": "0.0.0",
   "main": "index.js",
-  "author": "NoProtocol <info@noprotocol.nl>",
+  "author": "Pepijn Senders <pepijn@bekokstooft.nl>",
   "license": "ISC",
   "scripts": {
     "start": "node app/index.js",
