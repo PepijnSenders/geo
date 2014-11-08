@@ -1,0 +1,35 @@
+{
+  "name": "static-maps-new",
+  "version": "0.0.0",
+  "main": "index.js",
+  "author": "NoProtocol <info@noprotocol.nl>",
+  "license": "ISC",
+  "scripts": {
+    "start": "node app/index.js",
+    "postinstall": "bower install && gulp deploy"
+  },
+  "dependencies": {
+    "body-parser": "*",
+    "bower": "*",
+    "change-case": "^2.1.5",
+    "connect-multiparty": "*",
+    "cookie-parser": "*",
+    "dot": "*",
+    "ejs": "*",
+    "express": "*",
+    "gulp": "*",
+    "gulp-livereload": "*",
+    "gulp-noprotocol": "*",
+    "jade": "*",
+    "mongoose": "*",
+    "mongoose-timestamp": "^0.3.0",
+    "morgan": "*",
+    "newrelic": "*",
+    "phantom": "*",
+    "phantomjs": "*",
+    "q": "*",
+    "request": "^2.47.0",
+    "sugar": "*",
+    "url": "^0.10.1"
+  }
+}

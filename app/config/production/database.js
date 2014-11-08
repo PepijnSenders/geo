@@ -1,0 +1,1 @@
+module.exports = exports = { name: process.env.MONGOLAB_URI };
