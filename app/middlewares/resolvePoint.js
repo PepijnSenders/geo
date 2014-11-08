@@ -42,6 +42,10 @@ module.exports = exports = function (req, res, next) {
             message: err
           });
         });
+    } else {
+      res.status(500, {
+        message: 'Needs center point'
+      });
     }
   }
 };

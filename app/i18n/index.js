@@ -1,5 +1,6 @@
 var doT = require('dot'),
-    fs = require('fs');
+    fs = require('fs'),
+    config = require(global.APP_DIR + '/config');
 
 /**
  * @class i18n

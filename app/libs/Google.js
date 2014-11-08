@@ -14,6 +14,19 @@ module.exports = exports = (function() {
 
   return {
 
+    staticmap: function(options) {
+      var staticmapDefer = Q.defer();
+
+      this.request(_bases['staticmap'], options).then(function(result) {
+        console.log(result);
+      }).catch(function(err) {
+        console.log(err);
+        staticmapDefer.reject(err);
+      });
+
+      return staticmapDefer.promise;
+    },
+
     geocode: function(options) {
       var geocodeDeferred = Q.defer();
 
@@ -75,7 +88,8 @@ module.exports = exports = (function() {
           try {
             body = JSON.parse(body);
           } catch(err) {
-            return requestDeferred.reject(err);
+            // Image response
+            return requestDeferred.resolve(body);
           }
 
           if (!body.results.length) {

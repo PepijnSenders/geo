@@ -13,6 +13,4 @@ module.exports = exports = function(app) {
   app.get('/statics/path', StaticsController.path);
   app.get('/statics/grid', StaticsController.grid);
   app.get('/statics/zoom', StaticsController.zoom);
-
-
 };

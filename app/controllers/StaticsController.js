@@ -1,12 +1,10 @@
+var Static = require(global.APP_DIR + '/models/Static');
+
 module.exports = exports = {
 
   index: function(req, res) {
     try {
       var params = req.expects({
-        center: {
-          type: 'string',
-          validations: 'required'
-        },
         width: {
           type: 'number',
           default: 500
@@ -20,16 +18,17 @@ module.exports = exports = {
           default: 10
         },
         scale: {
-          type: 'number'
-        },
-        format: {
-          type: 'string'
+          type: 'number',
+          default: 1
         },
         maptype: {
-          type: 'string'
+          type: 'string',
+          validations: 'regex:/roadmap|satellite|terrain|hybrid/',
+          default: 'roadmap'
         },
         language: {
-          type: 'string'
+          type: 'string',
+          default: 'en'
         },
         region: {
           type: 'string'
@@ -45,14 +44,20 @@ module.exports = exports = {
         },
         style: {
           type: 'string'
-        },
-        size: {
-          type: 'string'
         }
       });
-    } catch(errors) {
-
+    } catch (errors) {
+      return res.status(400).send({
+        message: errors
+      });
     }
+
+
+    var static = new Static(params);
+    static.point = req.points['center'];
+    static.save(function(err) {
+      console.log(err);
+    });
   },
 
   path: function(req, res) {
