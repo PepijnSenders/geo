@@ -1,4 +1,8 @@
-var url = require('url');
+var url = require('url'),
+    request = require('request'),
+    Q = require('q'),
+    config = require(global.APP_DIR + '/config')
+    GoogleCache = require(global.APP_DIR + '/models/GoogleCache');
 
 module.exports = exports = (function() {
 
@@ -13,37 +17,83 @@ module.exports = exports = (function() {
     geocode: function(options) {
       var geocodeDeferred = Q.defer();
 
-
+      this.request(_bases['geocode'], {
+        address: options.address,
+        components: options.components,
+        bounds: options.bounds,
+        language: options.language,
+        region: options.region
+      }).then(function(result) {
+        if (result.status === 'OK' && result.results.length > 0) {
+          geocodeDeferred.resolve(result.results[0]);
+        } else {
+          geocodeDeferred.reject('Address not resolved');
+        }
+      }).catch(function(err) {
+        geocodeDeferred.reject(err);
+      });
 
       return geocodeDeferred.promise;
+    },
+
+    getCached: function(service, query) {
+      var getCachedDeferred = Q.defer();
+
+      GoogleCache.findOne({
+        service: service,
+        query: query
+      }, function(err, document) {
+        if (document) {
+          getCachedDeferred.resolve(document);
+        } else {
+          getCachedDeferred.reject(err ? err : null);
+        }
+      });
+
+      return getCachedDeferred.promise;
     },
 
     request: function(base, query) {
       var requestDeferred = Q.defer();
 
-      var requestUrl = url.parse(_bases[base]);
+      var requestUrl = url.parse(base);
 
-      Object.merge(requestUrl.query, query);
+      requestUrl.query = query;
       requestUrl.query.key = config.get('google.key');
 
-      request(url.format(requestUrl), function(err, response, body) {
-        if (err) {
-          return requestDeferred.reject(err);
-        }
+      var service = base,
+          query = JSON.stringify(requestUrl.query);
 
-        try {
-          body = JSON.parse(body);
-        } catch(err) {
-          return requestDeferred.reject(err);
-        }
+      this.getCached(service, query).then(function(document) {
+        requestDeferred.resolve(document.result);
+      }).catch(function() {
+        request(url.format(requestUrl), function(err, response, body) {
+          if (err) {
+            return requestDeferred.reject(err);
+          }
 
-        if (!body.results.length) {
-          return requestDeferred.reject(body.status);
-        }
+          try {
+            body = JSON.parse(body);
+          } catch(err) {
+            return requestDeferred.reject(err);
+          }
 
-        var result = body.results[0];
+          if (!body.results.length) {
+            return requestDeferred.reject(body.status);
+          }
 
-        requestDeferred.resolve(result);
+          var googleCache = new GoogleCache();
+          googleCache.service = service;
+          googleCache.query = query;
+          googleCache.result = body;
+
+          googleCache.save(function(err) {
+            if (err) {
+              return requestDeferred.reject(err);
+            }
+            requestDeferred.resolve(googleCache.result);
+          });
+        });
       });
 
       return requestDeferred.promise;
