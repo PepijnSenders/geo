@@ -17,6 +17,7 @@ var StaticSchema = new mongoose.Schema({
   path: String,
   visible: String,
   style: String,
+  url: String,
 
   point: {
     type: mongoose.Schema.Types.ObjectId,
@@ -26,7 +27,8 @@ var StaticSchema = new mongoose.Schema({
 });
 
 StaticSchema.virtual('size').get(function() {
-  return this.width + 'x' + this.height;
+  var offset = 30;
+  return this.width + 'x' + (this.height + offset * 2);
 });
 
 StaticSchema.methods = (function() {
@@ -47,6 +49,36 @@ StaticSchema.methods = (function() {
       return getPointDeferred.promise;
     },
 
+    getStatic: function() {
+      var getStaticDeferred = Q.defer();
+
+      console.log(this);
+
+      mongoose.model('Static', StaticSchema)
+        .findOne({
+          width: this.width,
+          height: this.height,
+          zoom: this.zoom,
+          scale: this.scale,
+          maptype: this.maptype,
+          language: this.language,
+          region: this.region,
+          markers: this.markers,
+          path: this.path,
+          visible: this.visible,
+          style: this.style,
+          point: this.point
+        }).populate('point').exec(function(err, static) {
+          if (static) {
+            getStaticDeferred.resolve(static);
+          } else {
+            getStaticDeferred.reject();
+          }
+        });
+
+      return getStaticDeferred.promise;
+    },
+
     staticmap: function() {
       var staticmapDefer = Q.defer();
 
@@ -54,16 +86,28 @@ StaticSchema.methods = (function() {
 
       this.getPoint()
         .then(function(point) {
-          static.center = point.location.join(',');
-          console.log(static);
-
-          return Google.staticmap(static);
+          return Google.staticmap({
+            center: point.location.join(','),
+            size: static.size,
+            width: static.width,
+            height: static.height,
+            zoom: static.zoom,
+            scale: static.scale,
+            maptype: static.maptype,
+            language: static.language,
+            region: static.region,
+            markers: static.markers,
+            path: static.path,
+            visible: static.visible,
+            style: static.style
+          });
         })
         .then(function(result) {
-          console.log(result);
+          static.url = result;
+          staticmapDefer.resolve(static);
         })
-        .catch(function(result) {
-          console.log(result);
+        .catch(function(err) {
+          staticmapDefer.reject(err);
         });
 
       return staticmapDefer.promise;
@@ -74,7 +118,10 @@ StaticSchema.methods = (function() {
 
 StaticSchema.pre('save', function(next) {
   this.staticmap()
-    .then(next);
+    .then(function(static) {
+      console.log('after', static);
+      next();
+    });
 });
 
 module.exports = exports = mongoose.model('Static', StaticSchema);

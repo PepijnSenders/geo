@@ -1,5 +1,6 @@
 var url = require('url'),
     request = require('request'),
+    cloudinary = require('cloudinary'),
     Q = require('q'),
     config = require(global.APP_DIR + '/config')
     GoogleCache = require(global.APP_DIR + '/models/GoogleCache');
@@ -14,13 +15,32 @@ module.exports = exports = (function() {
 
   return {
 
+    uploadImage: function(options) {
+      var uploadImageDeferred = Q.defer();
+
+      cloudinary.uploader.upload(options.url, function(result) {
+        var url = cloudinary.url(result.public_id, {
+          width: options.width,
+          height: options.height,
+          crop: options.crop
+        });
+        uploadImageDeferred.resolve(url);
+      });
+
+      return uploadImageDeferred.promise;
+    },
+
     staticmap: function(options) {
       var staticmapDefer = Q.defer();
 
-      this.request(_bases['staticmap'], options).then(function(result) {
-        console.log(result);
+      this.uploadImage({
+        url: url.format(this.buildUrl(_bases['staticmap'], options)),
+        width: options.width,
+        height: options.height,
+        crop: 'fill'
+      }).then(function(url) {
+        staticmapDefer.resolve(url);
       }).catch(function(err) {
-        console.log(err);
         staticmapDefer.reject(err);
       });
 
@@ -66,13 +86,19 @@ module.exports = exports = (function() {
       return getCachedDeferred.promise;
     },
 
-    request: function(base, query) {
-      var requestDeferred = Q.defer();
-
+    buildUrl: function(base, query) {
       var requestUrl = url.parse(base);
 
       requestUrl.query = query;
       requestUrl.query.key = config.get('google.key');
+
+      return requestUrl;
+    },
+
+    request: function(base, query) {
+      var requestDeferred = Q.defer();
+
+      var requestUrl = this.buildUrl(base, query);
 
       var service = base,
           query = JSON.stringify(requestUrl.query);

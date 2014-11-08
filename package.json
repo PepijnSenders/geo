@@ -12,6 +12,7 @@
     "body-parser": "*",
     "bower": "*",
     "change-case": "^2.1.5",
+    "cloudinary": "^1.0.12",
     "connect-multiparty": "*",
     "cookie-parser": "*",
     "dot": "*",

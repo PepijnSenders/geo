@@ -55,9 +55,15 @@ module.exports = exports = {
 
     var static = new Static(params);
     static.point = req.points['center'];
-    static.save(function(err) {
-      console.log(err);
-    });
+    static.getStatic()
+      .then(function(static) {
+        res.status(200).send(static);
+      })
+      .catch(function() {
+        static.save(function(err) {
+          res.status(201).send(static);
+        });
+      });
   },
 
   path: function(req, res) {

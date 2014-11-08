@@ -27,7 +27,6 @@ PointSchema.methods = (function() {
         point.location = [result.geometry.location.lat, result.geometry.location.lng];
         geocodeDeferred.resolve();
       }).catch(function(err) {
-        console.error(err);
         geocodeDeferred.reject(err);
       });
 
