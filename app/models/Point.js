@@ -1,7 +1,8 @@
 var mongoose = require('mongoose'),
     timestamps = require('mongoose-timestamp'),
     Q = require('q'),
-    Google = require(global.APP_DIR + '/libs/Google');
+    Google = require(global.APP_DIR + '/libs/Google')
+    Number = require(global.APP_DIR + '/libs/Number');
 
 var PointSchema = new mongoose.Schema({
 
@@ -9,6 +10,8 @@ var PointSchema = new mongoose.Schema({
     type: [Number],
     index: '2dsphere'
   },
+  lat: Number,
+  lon: Number,
   center: String
 
 });
@@ -16,6 +19,101 @@ var PointSchema = new mongoose.Schema({
 PointSchema.methods = (function() {
 
   return {
+
+    directionsTo: function(destination) {
+      var originX = this.lonToX(), originY = this.latToY();
+      var destinationX = destination.lonToX(), destinationY = destination.latToY();
+
+      return {
+        north: originY >= destinationY,
+        south: originY < destinationY,
+        west: originX >= destinationX,
+        east: originX < destinationX
+      };
+    },
+
+    distanceTo: function(destination) {
+      if (typeof precision == 'undefined') precision = 4;
+
+      var R = require(global.APP_DIR + '/models/Point').radius;
+      var φ1 = this.lat.toRadians(),  λ1 = this.lon.toRadians();
+      var φ2 = destination.lat.toRadians(), λ2 = destination.lon.toRadians();
+      var Δφ = φ2 - φ1;
+      var Δλ = λ2 - λ1;
+
+      var a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+      Math.cos(φ1) * Math.cos(φ2) *
+      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+      var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      var d = R * c;
+
+
+      return d.toPrecisionFixed(Number(precision));
+    },
+
+    arbitraryZoom: function(destination, width, height, canvasWidth, canvasHeight) {
+      var Point = require(global.APP_DIR + '/models/Point');
+
+      var Δx = Math.abs(this.lonToX() - destination.lonToX()),
+          Δy = Math.abs(this.latToY() - destination.latToY());
+
+      var virtualOrigin = new Point({
+        lat: this.xToLon(0),
+        lon: this.yToLat(0)
+      }),
+      virtualDestination = new Point({
+        lat: this.xToLon(Δx / Math.ceil(canvasWidth / width)),
+        lon: this.yToLat(Δy / Math.ceil(canvasHeight / height))
+      });
+
+      var WORLD_DIM = { height: 256, width: 256 },
+          ZOOM_MAX = 21;
+
+      function zoom (mapPx, worldPx, fraction) {
+        return Math.floor(Math.log(mapPx / worldPx / fraction) / Math.LN2);
+      }
+
+      function latRad (lat) {
+        var sin = Math.sin(lat * Math.PI / 180);
+        var radX2 = Math.log((1 + sin) / (1 - sin)) / 2;
+        return Math.max(Math.min(radX2, Math.PI), -Math.PI) / 2;
+      }
+
+      var latFraction = (latRad(virtualOrigin.lat) - latRad(virtualDestination.lat)) / Math.PI;
+
+      var lonDiff = virtualOrigin.lon - virtualDestination.lon;
+      var lonFraction = ((lonDiff < 0) ? (lonDiff + 360) : lonDiff) / 360;
+
+      var latZoom = zoom(height, WORLD_DIM.height, latFraction);
+      var lonZoom = zoom(width, WORLD_DIM.width, lonFraction);
+
+      return Math.min(latZoom, lonZoom, ZOOM_MAX);
+    },
+
+    yToLat: function(y) {
+      var Point = require(global.APP_DIR + '/models/Point');
+      return (Math.PI / 2 - 2 *
+        Math.atan(Math.exp((Math.round(y) - Point.offset) /
+          Point.mercatorRadius))) * 180 / Math.PI;
+    },
+
+    latToY: function() {
+      var Point = require(global.APP_DIR + '/models/Point');
+      return Math.round(Point.offset - Point.mercatorRadius *
+        Math.log((1 + Math.sin(this.lat * Math.PI / 180)) /
+          (1 - Math.sin(this.lat * Math.PI / 180))) / 2);
+    },
+
+    xToLon: function(x) {
+      var Point = require(global.APP_DIR + '/models/Point');
+      return ((Math.round(x) - Point.offset) / Point.mercatorRadius) * 180/ Math.PI;
+    },
+
+    lonToX: function() {
+      var Point = require(global.APP_DIR + '/models/Point');
+      return Math.round(Point.offset + Point.mercatorRadius * this.lon * Math.PI / 180);
+    },
+
     geocode: function() {
       var geocodeDeferred = Q.defer();
 
@@ -25,6 +123,8 @@ PointSchema.methods = (function() {
         address: this.center
       }).then(function(result) {
         point.location = [result.geometry.location.lat, result.geometry.location.lng];
+        point.lat = point.location[0];
+        point.lon = point.location[1];
         geocodeDeferred.resolve();
       }).catch(function(err) {
         geocodeDeferred.reject(err);
@@ -32,13 +132,41 @@ PointSchema.methods = (function() {
 
       return geocodeDeferred.promise;
     }
+
+  };
+
+})();
+
+PointSchema.statics = (function() {
+
+  return {
+
+    getPoint: function(_id) {
+      var getPointDeferred = Q.defer();
+
+      require(global.APP_DIR + '/models/Point').findOne({
+        _id: _id
+      }, function(err, point) {
+        if (err) {
+          return getPointDeferred.reject(err);
+        }
+        getPointDeferred.resolve(point);
+      });
+
+      return getPointDeferred.promise;
+    },
+
+    radius: 6371,
+    offset: 268435456,
+    mercatorRadius: 85445659.44705395
+
   };
 
 })();
 
 PointSchema.pre('save', function(next) {
   this.geocode()
-    .then(next);
+  .then(next);
 });
 
 PointSchema.plugin(timestamps);

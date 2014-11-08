@@ -34,25 +34,9 @@ StaticSchema.virtual('size').get(function() {
 StaticSchema.methods = (function() {
 
   return {
-    getPoint: function() {
-      var getPointDeferred = Q.defer();
-
-      Point.findOne({
-        _id: this.point
-      }, function(err, point) {
-        if (err) {
-          return getPointDeferred.reject(err);
-        }
-        getPointDeferred.resolve(point);
-      });
-
-      return getPointDeferred.promise;
-    },
 
     getStatic: function() {
       var getStaticDeferred = Q.defer();
-
-      console.log(this);
 
       mongoose.model('Static', StaticSchema)
         .findOne({
@@ -84,7 +68,7 @@ StaticSchema.methods = (function() {
 
       var static = this;
 
-      this.getPoint()
+      Point.getPoint(this.point)
         .then(function(point) {
           return Google.staticmap({
             center: point.location.join(','),
@@ -116,10 +100,60 @@ StaticSchema.methods = (function() {
 
 })();
 
+StaticSchema.statics = (function() {
+
+  return {
+    getDefaultParams: function(params) {
+      return Object.merge({
+        width: {
+          type: 'number',
+          default: 500
+        },
+        height: {
+          type: 'number',
+          default: 500
+        },
+        zoom: {
+          type: 'number',
+          default: 10
+        },
+        scale: {
+          type: 'number',
+          default: 1
+        },
+        maptype: {
+          type: 'string',
+          validations: 'regex:/roadmap|satellite|terrain|hybrid/',
+          default: 'roadmap'
+        },
+        language: {
+          type: 'string',
+          default: 'en'
+        },
+        region: {
+          type: 'string'
+        },
+        markers: {
+          type: 'string'
+        },
+        path: {
+          type: 'string'
+        },
+        visible: {
+          type: 'string'
+        },
+        style: {
+          type: 'string'
+        }
+      }, params);
+    }
+  };
+
+})();
+
 StaticSchema.pre('save', function(next) {
   this.staticmap()
     .then(function(static) {
-      console.log('after', static);
       next();
     });
 });

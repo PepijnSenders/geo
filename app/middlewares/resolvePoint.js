@@ -3,7 +3,7 @@ var Point = require(global.APP_DIR + '/models/Point'),
 
 module.exports = exports = function (req, res, next) {
   if (typeof req.query === 'object') {
-    var intersection = Object.getOwnPropertyNames(req.query).intersect(['center', 'start-point', 'end-point']);
+    var intersection = Object.getOwnPropertyNames(req.query).intersect(['center', 'origin', 'destination']);
 
     if (intersection.length > 0) {
       req.points = {};

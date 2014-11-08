@@ -1,73 +1,79 @@
-var Static = require(global.APP_DIR + '/models/Static');
+var Static = require(global.APP_DIR + '/models/Static'),
+    Path = require(global.APP_DIR + '/models/Path'),
+    request = require('request');
 
 module.exports = exports = {
 
   index: function(req, res) {
     try {
-      var params = req.expects({
-        width: {
-          type: 'number',
-          default: 500
-        },
-        height: {
-          type: 'number',
-          default: 500
-        },
-        zoom: {
-          type: 'number',
-          default: 10
-        },
-        scale: {
-          type: 'number',
-          default: 1
-        },
-        maptype: {
-          type: 'string',
-          validations: 'regex:/roadmap|satellite|terrain|hybrid/',
-          default: 'roadmap'
-        },
-        language: {
-          type: 'string',
-          default: 'en'
-        },
-        region: {
-          type: 'string'
-        },
-        markers: {
-          type: 'string'
-        },
-        path: {
-          type: 'string'
-        },
-        visible: {
-          type: 'string'
-        },
-        style: {
-          type: 'string'
+      var params = req.expects(Static.getDefaultParams({
+        json: {
+          type: 'boolean',
+          default: true
         }
-      });
+      }));
     } catch (errors) {
       return res.status(400).send({
         message: errors
       });
     }
 
+    var sendResponse = function(status, static) {
+      if (params.json) {
+        res.status(status).send(static);
+      } else {
+        res.status(status);
+        request.get(static.url).pipe(res);
+      }
+    };
 
     var static = new Static(params);
     static.point = req.points['center'];
     static.getStatic()
       .then(function(static) {
-        res.status(200).send(static);
+        sendResponse(200, static);
       })
       .catch(function() {
         static.save(function(err) {
-          res.status(201).send(static);
+          sendResponse(201, static);
         });
       });
   },
 
   path: function(req, res) {
+    try {
+      var params = req.expects(Static.getDefaultParams({
+        debug: {
+          type: 'boolean',
+          default: false
+        },
+        adjacent: {
+          type: 'boolean',
+          default: 0
+        }
+      }));
+    } catch (errors) {
+      return res.status(400).send({
+        message: errors
+      });
+    }
 
+    var path = new Path(params);
+    path.origin = req.points['origin'];
+    path.destination = req.points['destination'];
+    path.getPath()
+      .then(function() {
+
+      })
+      .catch(function() {
+        path.buildPath()
+          .then(function() {
+
+          })
+          .catch(function() {
+            console.log(arguments);
+          });
+      });
   },
 
   grid: function(req, res) {
