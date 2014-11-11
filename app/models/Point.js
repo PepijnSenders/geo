@@ -47,8 +47,137 @@ PointSchema.methods = (function() {
       var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
       var d = R * c;
 
-
       return d.toPrecisionFixed(Number(precision));
+    },
+
+    geometry: function(width, height, zoom) {
+      var Point = require(global.APP_DIR + '/models/Point');
+
+      var Δx = Math.round(width / 2), Δy = Math.round(height / 2);
+
+      var quarters = {
+        north: this.adjustLatByPixels(Δy * -1, zoom),
+        south: this.adjustLatByPixels(Δy, zoom),
+        west: this.adjustLonByPixels(Δx * -1, zoom),
+        east: this.adjustLonByPixels(Δx, zoom)
+      };
+
+      var geometry = {
+        quarters: quarters,
+        bounds: {
+          northWest: new Point({
+            lat: quarters.north,
+            lon: quarters.west
+          }),
+          northEast: new Point({
+            lat: quarters.north,
+            lon: quarters.east
+          }),
+          southWest: new Point({
+            lat: quarters.south,
+            lon: quarters.west
+          }),
+          southEast: new Point({
+            lat: quarters.south,
+            lon: quarters.east
+          })
+        }
+      };
+
+      return geometry;
+    },
+
+    adjacent: function(α, width, height, zoom) {
+      var Point = require(global.APP_DIR + '/models/Point');
+      var geometry = this.geometry(width, height, zoom);
+
+      var sideX = Math.abs(geometry.bounds.northWest.lon - geometry.bounds.northEast.lon),
+      sideY = Math.abs(geometry.bounds.northWest.lat - geometry.bounds.southWest.lat);
+
+      α = Math.abs(α) % 360;
+      var αMax = Math.atan(sideY / sideX),
+      opposite, adjacent, lat, lon;
+
+      αMax = αMax.toDegrees();
+
+      // Right side of tile
+      if (α < αMax || α >= (360 - αMax)) {
+        opposite = Math.tan(α.toRadians()) * sideX;
+        lat = this.lat + opposite;
+        lon = this.lon + sideX;
+      }
+
+      // Bottom side of tile
+      if ((180 - αMax) > α && α >= αMax) {
+        adjacent = sideY / Math.tan(α.toRadians());
+        lat = this.lat + sideY;
+        lon = this.lon + adjacent;
+      }
+
+      // Left side of tile
+      if ((180 + αMax) > α && α >= (180 - αMax)) {
+        opposite = 2 * (Math.tan(α.toRadians()) * (sideX / 2));
+        lat = this.lat + opposite;
+        lon = this.lon - sideX;
+      }
+
+      // Top side of tile
+      if ((360 - αMax) > α && α >= (180 + αMax)) {
+        adjacent = sideY / Math.tan(α.toRadians());
+        lat = this.lat - sideY;
+        lon = this.lon + adjacent;
+      }
+
+      var adjacentPoint = new Point({
+        lat: lat,
+        lon: lon
+      });
+      adjacentPoint.angle = α;
+
+      return adjacentPoint;
+    },
+
+    tilesInZoom: function(destination, width, height, zoom) {
+      var Point = require(global.APP_DIR + '/models/Point');
+
+      var originGeometry = this.geometry(width, height, zoom),
+          destinationGeometry = destination.geometry(width, height, zoom);
+
+      var directions = this.directionsTo(destination);
+
+      var ΔxTile = originGeometry.bounds.northWest.distanceTo(originGeometry.bounds.northEast),
+          ΔyTile = originGeometry.bounds.northWest.distanceTo(originGeometry.bounds.southWest);
+
+
+      var Δx, Δy;
+      if (directions.north) {
+        Δy = originGeometry.bounds.southWest.distanceTo(new Point({
+          lat: destinationGeometry.quarters.north,
+          lon: originGeometry.bounds.southWest.lon
+        }));
+      } else {
+        Δy = originGeometry.bounds.northWest.distanceTo(new Point({
+          lat: destinationGeometry.quarters.south,
+          lon: originGeometry.bounds.northWest.lon
+        }));
+      }
+
+      if (directions.west) {
+        Δx = originGeometry.bounds.southEast.distanceTo(new Point({
+          lat: originGeometry.bounds.southEast.lat,
+          lon: destinationGeometry.quarters.west
+        }));
+      } else {
+        Δx = originGeometry.bounds.southWest.distanceTo(new Point({
+          lat: originGeometry.bounds.southWest.lat,
+          lon: destinationGeometry.quarters.east
+        }));
+      }
+
+      return {
+        x: Math.ceil(Δx / ΔxTile),
+        y: Math.ceil(Δy / ΔyTile)
+      };
     },
 
     arbitraryZoom: function(destination, width, height, canvasWidth, canvasHeight) {
@@ -112,6 +241,14 @@ PointSchema.methods = (function() {
     lonToX: function() {
       var Point = require(global.APP_DIR + '/models/Point');
       return Math.round(Point.offset + Point.mercatorRadius * this.lon * Math.PI / 180);
+    },
+
+    adjustLatByPixels: function (Δy, zoom) {
+      return this.yToLat(this.latToY(this.lat) + (Δy << (21 - zoom)));
+    },
+
+    adjustLonByPixels: function (Δx, zoom) {
+      return this.xToLon(this.lonToX(this.lon) + (Δx << (21 - zoom)));
     },
 
     geocode: function() {

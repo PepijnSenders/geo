@@ -4,8 +4,9 @@ var mongoose = require('mongoose'),
 /**
  * @class Database
  */
-var Database = function () {
+var Database = function(silent) {
   this.connection = mongoose.connection;
+  this.silent = silent;
 };
 
 Object.merge(Database.prototype, {
@@ -39,7 +40,9 @@ Object.merge(Database.prototype, {
    * @return {void}
    */
   onConnectionError: function () {
-    console.error('Database error: ', arguments);
+    if (!this.silent) {
+      console.error('Database error: ', arguments);
+    }
   },
 
   /**
@@ -47,7 +50,9 @@ Object.merge(Database.prototype, {
    * @return {void}
    */
   onConnectionSuccess: function () {
-    console.log('Database success: ', arguments);
+    if (!this.silent) {
+      console.log('Database success: ', arguments);
+    }
   }
 
 });
