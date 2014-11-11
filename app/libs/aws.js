@@ -6,12 +6,6 @@ module.exports = exports = (function() {
       path = require('path'),
       config = require(global.APP_DIR + '/config');
 
-  console.log({
-    accessKeyId: config.get('aws.accessKeyId'),
-    region: config.get('aws.region'),
-    secretAccessKey: config.get('aws.secretAccessKey')
-  });
-
   AWS.config.update({
     accessKeyId: config.get('aws.accessKeyId'),
     region: config.get('aws.region'),

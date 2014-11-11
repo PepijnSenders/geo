@@ -32,7 +32,8 @@ StaticSchema.virtual('size').get(function() {
 });
 
 StaticSchema.virtual('realSize').get(function() {
-  return this.width + 'x' + this.height + '+15';
+  var offset = 30;
+  return this.width + 'x' + this.height + '+0+15';
 });
 
 StaticSchema.methods = (function() {

@@ -251,21 +251,57 @@ PointSchema.methods = (function() {
       return this.xToLon(this.lonToX(this.lon) + (Δx << (21 - zoom)));
     },
 
+    capillaryWaves: function(k, width, height, zoom) {
+      var capillaryWavesDeferred = Q.defer();
+
+      var promises = [];
+      var Point = require(global.APP_DIR + '/models/Point');
+
+      var capillaryArray = [];
+      var total = k * 2;
+      for (var y = 0; y < total; y++) {
+        capillaryArray[y] = [];
+        for (var x = 0; x < total; x++) {
+          var Δx = ((total / 2 - x) * width) - width / 2,
+              Δy = ((total / 2 - y) * height) - height / 2;
+          var point = new Point();
+
+          point.location = [this.adjustLatByPixels(Δx, zoom), this.adjustLonByPixels(Δy, zoom)];
+          point.lat = point.location[0];
+          point.lon = point.location[1];
+          capillaryArray[y][x] = point;
+
+          promises.push(Q.nbind(point.save, point)());
+        }
+      }
+
+      Q.allSettled(promises)
+        .then(function() {
+          capillaryWavesDeferred.resolve(capillaryArray);
+        });
+
+      return capillaryWavesDeferred.promise;
+    },
+
     geocode: function() {
       var geocodeDeferred = Q.defer();
 
       var point = this;
 
-      Google.geocode({
-        address: this.center
-      }).then(function(result) {
-        point.location = [result.geometry.location.lat, result.geometry.location.lng];
-        point.lat = point.location[0];
-        point.lon = point.location[1];
+      if ('location' in this && this.location.length === 2) {
         geocodeDeferred.resolve();
-      }).catch(function(err) {
-        geocodeDeferred.reject(err);
-      });
+      } else {
+        Google.geocode({
+          address: this.center
+        }).then(function(result) {
+          point.location = [result.geometry.location.lat, result.geometry.location.lng];
+          point.lat = point.location[0];
+          point.lon = point.location[1];
+          geocodeDeferred.resolve();
+        }).catch(function(err) {
+          geocodeDeferred.reject(err);
+        });
+      }
 
       return geocodeDeferred.promise;
     }

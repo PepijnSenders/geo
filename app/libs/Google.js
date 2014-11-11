@@ -64,6 +64,8 @@ module.exports = exports = (function() {
         });
       }).then(function(tmpPath) {
         return aws.uploadFile(tmpPath);
+      }).then(function(url) {
+        staticmapDefer.resolve(url);
       }).catch(function(err) {
         staticmapDefer.reject(err);
       });
