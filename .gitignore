@@ -76,3 +76,4 @@ sftp-config.json
 nbproject
 public/dist
 public/css
+tmp/

@@ -31,6 +31,10 @@ StaticSchema.virtual('size').get(function() {
   return this.width + 'x' + (this.height + offset * 2);
 });
 
+StaticSchema.virtual('realSize').get(function() {
+  return this.width + 'x' + this.height + '+15';
+});
+
 StaticSchema.methods = (function() {
 
   return {
@@ -73,6 +77,7 @@ StaticSchema.methods = (function() {
           return Google.staticmap({
             center: point.location.join(','),
             size: static.size,
+            realSize: static.realSize,
             width: static.width,
             height: static.height,
             zoom: static.zoom,

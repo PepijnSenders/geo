@@ -1,3 +1,5 @@
+process.env.NODE_ENV = process.argv[3] ? process.argv[3] : process.env.NODE_ENV;
+
 var sugar = require('sugar'),
     constants = require(__dirname + '/app/libs/constants')(),
     Database = require(global.APP_DIR + '/classes/Database')
@@ -13,7 +15,6 @@ var operations = [
 ];
 
 var operation = process.argv[2];
-console.log(operation);
 
 if (!~operations.indexOf(operation)) {
   console.log('Operations:\n');

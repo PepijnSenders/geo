@@ -9,6 +9,7 @@
     "postinstall": "bower install && gulp deploy"
   },
   "dependencies": {
+    "aws-sdk": "^2.0.25",
     "body-parser": "*",
     "bower": "*",
     "change-case": "^2.1.5",
@@ -18,9 +19,11 @@
     "dot": "*",
     "ejs": "*",
     "express": "*",
+    "gm": "^1.17.0",
     "gulp": "*",
     "gulp-livereload": "*",
     "gulp-noprotocol": "*",
+    "imagemagick": "^0.1.3",
     "jade": "*",
     "mongo-uri": "^0.1.2",
     "mongoose": "*",
@@ -32,6 +35,7 @@
     "q": "*",
     "request": "^2.47.0",
     "sugar": "*",
+    "uniqid": "^1.0.0",
     "url": "^0.10.1"
   }
 }

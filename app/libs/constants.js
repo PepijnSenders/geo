@@ -6,6 +6,7 @@
 var constants = function () {
   global.APP_DIR = __dirname + '/../../app';
   global.PUBLIC_DIR = __dirname + '/../../public';
+  global.TMP_DIR = __dirname + '/../../tmp';
 
   global.ENV = process.env.NODE_ENV ? process.env.NODE_ENV : 'development';
   global.PORT = process.env.PORT ? process.env.PORT : 4000;

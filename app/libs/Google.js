@@ -1,11 +1,15 @@
-var url = require('url'),
-    request = require('request'),
-    cloudinary = require('cloudinary'),
-    Q = require('q'),
-    config = require(global.APP_DIR + '/config')
-    GoogleCache = require(global.APP_DIR + '/models/GoogleCache');
-
 module.exports = exports = (function() {
+
+  var url = require('url'),
+      request = require('request'),
+      im = require('imagemagick'),
+      aws = require(global.APP_DIR + '/libs/aws'),
+      Q = require('q'),
+      config = require(global.APP_DIR + '/config')
+      GoogleCache = require(global.APP_DIR + '/models/GoogleCache'),
+      fs = require('fs'),
+      path = require('path'),
+      uniqid = require('uniqid');
 
   var _bases = {
     'staticmap': 'https://maps.googleapis.com/maps/api/staticmap',
@@ -13,33 +17,53 @@ module.exports = exports = (function() {
     'streetview': 'https://maps.googleapis.com/maps/api/streetview'
   };
 
-  return {
+  var Google = {
 
-    uploadImage: function(options) {
-      var uploadImageDeferred = Q.defer();
+    downloadImage: function(options) {
+      var downloadImageDeferred = Q.defer();
 
-      cloudinary.uploader.upload(options.url, function(result) {
-        var url = cloudinary.url(result.public_id, {
-          width: options.width,
-          height: options.height,
-          crop: options.crop
-        });
-        uploadImageDeferred.resolve(url);
+      var tmpFile = global.TMP_DIR + '/static-' + uniqid() + '.png';
+      var stream = fs.createWriteStream(tmpFile);
+
+      request(options.url, function(err, response, body) {
+        downloadImageDeferred.resolve(tmpFile);
+      }).pipe(stream);
+
+      return downloadImageDeferred.promise;
+    },
+
+    cropImage: function(options) {
+      var cropImageDeferred = Q.defer();
+
+      im.convert([
+        '-gravity',
+        'Center',
+        options.path,
+        '-crop',
+        options.realSize,
+        options.path
+      ], function(err, stdout) {
+        if (err) {
+          return cropImageDeferred.reject();
+        }
+        cropImageDeferred.resolve(options.path);
       });
 
-      return uploadImageDeferred.promise;
+      return cropImageDeferred.promise;
     },
 
     staticmap: function(options) {
       var staticmapDefer = Q.defer();
 
-      this.uploadImage({
-        url: url.format(this.buildUrl(_bases['staticmap'], options)),
-        width: options.width,
-        height: options.height,
-        crop: 'fill'
-      }).then(function(url) {
-        staticmapDefer.resolve(url);
+      this.downloadImage({
+        url: url.format(this.buildUrl(_bases['staticmap'], options))
+      }).then(function(tmpPath) {
+        return Google.cropImage({
+          path: tmpPath,
+          realSize: options.realSize
+        });
+      }).then(function(tmpPath) {
+        return aws.uploadFile(tmpPath);
       }).catch(function(err) {
         staticmapDefer.reject(err);
       });
@@ -140,5 +164,7 @@ module.exports = exports = (function() {
     }
 
   };
+
+  return Google;
 
 })();

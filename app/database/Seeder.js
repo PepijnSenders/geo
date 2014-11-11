@@ -19,7 +19,7 @@ module.exports = exports = (function() {
 
         var requiredObjects = [];
         for (var i = 0; i < filteredFiles.length; i++) {
-          requiredObjects.push(require(global.APP_DIR + '/database/seeds/' + filteredFiles));
+          requiredObjects.push(require(global.APP_DIR + '/database/seeds/' + filteredFiles[i]));
         }
 
         getFilesDeferred.resolve(requiredObjects);
@@ -31,59 +31,65 @@ module.exports = exports = (function() {
     _mongoimport: function(data) {
       var mongoimportDeferred = Q.defer();
 
-      var uri = mongoUri.parse(config.get('database.name'));
+      mongoimportDeferred.resolve();
 
-      var params = [];
+      // var uri = mongoUri.parse(config.get('database.name'));
 
-      if (uri.hosts && uri.hosts.length && uri.hosts[0]) {
-        params.push('--host');
-        params.push(uri.hosts[0]);
-      }
-      if (uri.ports && uri.ports.length && uri.ports[0]) {
-        params.push('--port');
-        params.push(uri.ports[0]);
-      }
-      if (uri.username) {
-        params.push('--username');
-        params.push(uri.username);
-      }
-      if (uri.password) {
-        params.push('--password');
-        params.push(uri.password);
-      }
-      if (data.collection) {
-        params.push('--collection');
-        params.push(data.collection);
-      }
-      if (uri.database) {
-        params.push('--db');
-        params.push(uri.database);
-      }
-      if (data.path) {
-        params.push('--file');
-        params.push(data.path);
-      }
+      // var params = [];
 
-      var importSpawn = spawn('mongoimport', params);
+      // if (uri.hosts && uri.hosts.length && uri.hosts[0]) {
+      //   params.push('--host');
+      //   params.push(uri.hosts[0]);
+      // }
+      // if (uri.ports && uri.ports.length && uri.ports[0]) {
+      //   params.push('--port');
+      //   params.push(uri.ports[0]);
+      // }
+      // if (uri.username) {
+      //   params.push('--username');
+      //   params.push(uri.username);
+      // }
+      // if (uri.password) {
+      //   params.push('--password');
+      //   params.push(uri.password);
+      // }
+      // if (data.collection) {
+      //   params.push('--collection');
+      //   params.push(data.collection);
+      // }
+      // if (uri.database) {
+      //   params.push('--db');
+      //   params.push(uri.database);
+      // }
+      // if (data.path) {
+      //   params.push('--file');
+      //   params.push(data.path);
+      // }
 
-      importSpawn.stdout.on('data', function(data) {
-        console.log('stdout:' + data);
-      });
+      // var importSpawn = spawn('mongoimport', params);
 
-      var errorMesssages = [];
-      importSpawn.stderr.on('data', function(data) {
-        errorMesssages.push(data);
-      });
+      // importSpawn.stdout.on('data', function(data) {
+      //   console.log('stdout:' + data);
+      // });
 
-      importSpawn.on('close', function(errors) {
-        if (errors > 0) {
-          mongoimportDeferred.reject(errorMesssages);
-        } else {
-          mongoimportDeferred.resolve();
-        }
-      });
+      // var errorMesssages = [];
+      // importSpawn.stderr.on('data', function(data) {
+      //   errorMesssages.push(data);
+      // });
+
+      // importSpawn.on('close', function(errors) {
+      //   if (errors > 0) {
+      //     mongoimportDeferred.reject(errorMesssages);
+      //   } else {
+      //     mongoimportDeferred.resolve();
+      //   }
+      // });
 
       return mongoimportDeferred.promise;
+    },
+
+    _fn: function(fn) {
+      fn.call();
     },
 
     start: function() {
