@@ -28,7 +28,10 @@ module.exports = exports = (function() {
           Body: body,
           ACL: 'public-read-write'
         }, function() {
-          uploadFileDeferred.resolve(aws._buildUrl(filename));
+          uploadFileDeferred.resolve({
+            url: aws._buildUrl(filename),
+            path: filePath
+          });
         });
       });
 

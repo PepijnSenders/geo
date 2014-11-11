@@ -18,6 +18,7 @@ var StaticSchema = new mongoose.Schema({
   visible: String,
   style: String,
   url: String,
+  path: String,
 
   point: {
     type: mongoose.Schema.Types.ObjectId,
@@ -40,28 +41,49 @@ StaticSchema.methods = (function() {
 
   return {
 
+    _getParameters: function() {
+      var params = {};
+
+      var keys = [
+        'width',
+        'height',
+        'zoom',
+        'scale',
+        'maptype',
+        'language',
+        'region',
+        'markers',
+        'path',
+        'visible',
+        'style',
+        'url',
+        'path',
+        'point'
+      ];
+
+      var static = this;
+
+      keys.forEach(function(key) {
+        if (static[key]) {
+          params[key] = static[key];
+        }
+      });
+
+      return params;
+    },
+
     getStatic: function() {
       var getStaticDeferred = Q.defer();
 
+      var model = this;
+
       mongoose.model('Static', StaticSchema)
-        .findOne({
-          width: this.width,
-          height: this.height,
-          zoom: this.zoom,
-          scale: this.scale,
-          maptype: this.maptype,
-          language: this.language,
-          region: this.region,
-          markers: this.markers,
-          path: this.path,
-          visible: this.visible,
-          style: this.style,
-          point: this.point
-        }).populate('point').exec(function(err, static) {
+        .findOne(this._getParameters())
+        .populate('point').exec(function(err, static) {
           if (static) {
             getStaticDeferred.resolve(static);
           } else {
-            getStaticDeferred.reject();
+            getStaticDeferred.reject(model);
           }
         });
 
@@ -93,7 +115,8 @@ StaticSchema.methods = (function() {
           });
         })
         .then(function(result) {
-          static.url = result;
+          static.url = result.url;
+          static.path = result.path;
           staticmapDefer.resolve(static);
         })
         .catch(function(err) {

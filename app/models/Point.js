@@ -262,8 +262,9 @@ PointSchema.methods = (function() {
       for (var y = 0; y < total; y++) {
         capillaryArray[y] = [];
         for (var x = 0; x < total; x++) {
-          var Δx = ((total / 2 - x) * width) - width / 2,
-              Δy = ((total / 2 - y) * height) - height / 2;
+          var Δx = ((k - y) * -width) + width / 2,
+              Δy = ((k - x) * -height) + height / 2;
+
           var point = new Point();
 
           point.location = [this.adjustLatByPixels(Δx, zoom), this.adjustLonByPixels(Δy, zoom)];
@@ -271,11 +272,32 @@ PointSchema.methods = (function() {
           point.lon = point.location[1];
           capillaryArray[y][x] = point;
 
-          promises.push(Q.nbind(point.save, point)());
+          promises.push(point.getPoint().then(function(point) {
+            capillaryArray[this.y][this.x] = point;
+          }.bind({
+            x: x,
+            y: y
+          })));
         }
       }
 
       Q.allSettled(promises)
+        .then(function(resolves) {
+          var promisesAfter = [];
+          resolves.forEach(function(resolve) {
+            if (resolve.state === 'fulfilled') {
+              var deferred = Q.defer();
+
+              deferred.resolve(resolve.value);
+
+              promisesAfter.push(deferred.promise);
+            } else {
+              promisesAfter.push(Q.nbind(resolve.reason.save, resolve.reason)());
+            }
+          });
+
+          return Q.allSettled(promisesAfter);
+        })
         .then(function() {
           capillaryWavesDeferred.resolve(capillaryArray);
         });
@@ -304,6 +326,25 @@ PointSchema.methods = (function() {
       }
 
       return geocodeDeferred.promise;
+    },
+
+    getPoint: function() {
+      var getPointDeferred = Q.defer();
+
+      var model = this;
+
+      require(global.APP_DIR + '/models/Point').findOne({
+        lon: this.lon,
+        lat: this.lat
+      }, function(err, point) {
+        if (point) {
+          getPointDeferred.resolve(point);
+        } else {
+          getPointDeferred.reject(model);
+        }
+      });
+
+      return getPointDeferred.promise;
     }
 
   };

@@ -112,7 +112,7 @@ module.exports = exports = (function() {
           return Q.allSettled(promises);
         })
         .then(function() {
-          console.log(arguments);
+
         })
         .catch(function(errors) {
           console.log(arguments);
