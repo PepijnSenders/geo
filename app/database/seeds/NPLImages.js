@@ -111,6 +111,53 @@ module.exports = exports = {
         return fillStaticsDeferred.promise;
       };
 
+      this.montage = function(paths, filename) {
+        var montageDeferred = Q.defer();
+
+        im.montage(paths.concat([
+          '-tile',
+          (waves * 2) + 'x' + (waves * 2),
+          '-geometry',
+          width + 'x' + height,
+          filename
+        ]), function() {
+          montageDeferred.resolve();
+        });
+
+        return montageDeferred.promise;
+      };
+
+      this.scale = function(filename) {
+        var scaleDeferred = Q.defer();
+
+        im.convert([
+          filename,
+          '-scale',
+          'x70%',
+          filename
+        ], function() {
+          scaleDeferred.resolve();
+        });
+
+        return scaleDeferred.promise;
+      };
+
+      this.distort = function(filename) {
+        var distortDeferred = Q.defer();
+
+        im.convert([
+          filename,
+          '-distort',
+          'Perspective',
+          '"' + (width * waves) + ',' + (height * waves) + '"',
+          filename
+        ], function() {
+          console.log(arguments);
+        });
+
+        return distortDeferred.promise;
+      };
+
       var nplImagesFn = this;
 
       this.findPostalCodes()
@@ -133,17 +180,13 @@ module.exports = exports = {
 
             var filename = global.TMP_DIR + '/' + staticsCollection.postalCode._id + '.jpg';
 
-            im.montage(paths.concat([
-              '-tile',
-              '4x4',
-              '-geometry',
-              '500x500',
-              filename
-            ]), function() {
-              var deferred = Q.defer();
-              deferred.resolve();
-              promises.push(deferred.promise);
-            });
+            nplImagesFn.montage(paths, filename)
+              .then(function() {
+                return nplImagesFn.scale(filename);
+              })
+              .then(function() {
+                return nplImagesFn.distort(filename);
+              });
           });
 
           return Q.allSettled(promises);
