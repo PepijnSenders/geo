@@ -47,7 +47,10 @@ module.exports = exports = function(req) {
      */
     getUrl: function() {
       return helpers.getBase() + helpers.originalUrl;
-    }
+    },
+
+    config: require(global.APP_DIR + '/config')
+
   };
 
   return helpers;

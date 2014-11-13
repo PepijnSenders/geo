@@ -22,12 +22,18 @@ module.exports = exports = (function() {
     downloadImage: function(options) {
       var downloadImageDeferred = Q.defer();
 
-      var tmpFile = global.TMP_DIR + '/static-' + uniqid() + '.png';
-      var stream = fs.createWriteStream(tmpFile);
+      var tmpPath = global.TMP_DIR + '/statics/' + options._id + '.png';
+      var stream = fs.createWriteStream(tmpPath);
 
       request(options.url, function(err, response, body) {
-        downloadImageDeferred.resolve(tmpFile);
+        if (body.length < 1000) {
+          console.log(body);
+        }
       }).pipe(stream);
+
+      stream.on('close', function() {
+        downloadImageDeferred.resolve(tmpPath);
+      });
 
       return downloadImageDeferred.promise;
     },
@@ -44,7 +50,8 @@ module.exports = exports = (function() {
         options.path
       ], function(err, stdout) {
         if (err) {
-          return cropImageDeferred.reject();
+          console.log(err, stdout);
+          return cropImageDeferred.reject(err);
         }
         cropImageDeferred.resolve(options.path);
       });
@@ -55,8 +62,11 @@ module.exports = exports = (function() {
     staticmap: function(options) {
       var staticmapDefer = Q.defer();
 
+      var _id = options._id;
+
       this.downloadImage({
-        url: url.format(this.buildUrl(_bases['staticmap'], options))
+        url: url.format(this.buildUrl(_bases['staticmap'], options)),
+        _id: _id
       }).then(function(tmpPath) {
         return Google.cropImage({
           path: tmpPath,

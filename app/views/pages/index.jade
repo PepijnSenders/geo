@@ -1,5 +1,12 @@
 extends ../layouts/default
 
 block content
-  h1
-    | Hello world
+  div(id="map-canvas")
+
+  script(type="text/javascript", src="https://maps.googleapis.com/maps/api/js?key=#{config.get('google.key')}")
+
+  script(type="text/javascript")
+    | window.lat = #{lat};
+    | window.lon = #{lon};
+
+  script(type="text/javascript", src="js/map.js")

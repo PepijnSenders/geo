@@ -28,13 +28,13 @@ var StaticSchema = new mongoose.Schema({
 });
 
 StaticSchema.virtual('size').get(function() {
-  var offset = 30;
+  var offset = 60;
   return this.width + 'x' + (this.height + offset * 2);
 });
 
 StaticSchema.virtual('realSize').get(function() {
-  var offset = 30;
-  return this.width + 'x' + this.height + '+0+15';
+  var offset = 60;
+  return this.width + 'x' + this.height + '+0+30';
 });
 
 StaticSchema.methods = (function() {
@@ -97,6 +97,7 @@ StaticSchema.methods = (function() {
 
       Point.getPoint(this.point)
         .then(function(point) {
+          console.log(point.location);
           return Google.staticmap({
             center: point.location.join(','),
             size: static.size,
@@ -111,7 +112,8 @@ StaticSchema.methods = (function() {
             markers: static.markers,
             path: static.path,
             visible: static.visible,
-            style: static.style
+            style: static.style,
+            _id: static._id
           });
         })
         .then(function(result) {
@@ -184,6 +186,9 @@ StaticSchema.pre('save', function(next) {
   this.staticmap()
     .then(function(static) {
       next();
+    })
+    .catch(function() {
+      console.log(arguments);
     });
 });
 

@@ -10,6 +10,7 @@ var PostalCodeSchema = mongoose.Schema({
   streetAddress: String,
   city: String,
   postalCode: String,
+  rendered: Boolean,
   loc: {
     type: [Number],
     index: '2dsphere'

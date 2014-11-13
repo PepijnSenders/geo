@@ -13,8 +13,6 @@ var express = require('express'),
     expects = require(global.APP_DIR + '/middlewares/expects'),
     cors = require(global.APP_DIR + '/middlewares/cors'),
     jade = require(global.APP_DIR + '/middlewares/jade'),
-    cachedRequest = require(global.APP_DIR + '/middlewares/cachedRequest'),
-    resolvePoint = require(global.APP_DIR + '/middlewares/resolvePoint'),
     Database = require(global.APP_DIR + '/classes/Database'),
     config = require(global.APP_DIR + '/config');
 
@@ -22,8 +20,6 @@ app.use(logger('dev'));
 app.use(bodyParser.json());
 
 app.use(cors);
-app.use(cachedRequest);
-app.use(resolvePoint);
 app.use(expects);
 app.use(jade);
 

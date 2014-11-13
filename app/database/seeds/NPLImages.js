@@ -1,204 +1,279 @@
 module.exports = exports = {
-  'fn': (function() {
+  // 'fn': (function() {
 
-    var PostalCode = require(global.APP_DIR + '/models/PostalCode'),
-        Static = require(global.APP_DIR + '/models/Static'),
-        Point = require(global.APP_DIR + '/models/Point'),
-        Q = require('q'),
-        im = require('imagemagick');
+  //   var PostalCode = require(global.APP_DIR + '/models/PostalCode'),
+  //       Static = require(global.APP_DIR + '/models/Static'),
+  //       Point = require(global.APP_DIR + '/models/Point'),
+  //       Q = require('q'),
+  //       spawn = require('child_process').spawn,
+  //       im = require('imagemagick');
 
-    return function() {
+  //   return function() {
 
-      var width = 500,
-          height = 500,
-          zoom = 18,
-          waves = 2,
-          maptype = 'satellite';
+  //     var width = 500,
+  //         height = 500,
+  //         zoom = 18,
+  //         waves = 2,
+  //         maptype = 'satellite',
+  //         distortPercentage = 0.2,
+  //         limit = 50;
 
-      this.findPostalCodes = function() {
-        var findPostalCodesDeferred = Q.defer();
+  //     this.findPostalCodes = function() {
+  //       var findPostalCodesDeferred = Q.defer();
 
-        PostalCode.find().skip(1000).limit(1).exec(function(err, documents) {
-          findPostalCodesDeferred.resolve(documents);
-        });
+  //       PostalCode.find({
+  //         latitude: {
+  //           $ne: 0
+  //         },
+  //         longitude: {
+  //           $ne: 0
+  //         }
+  //       }).limit(limit).exec(function(err, documents) {
+  //         findPostalCodesDeferred.resolve(documents);
+  //       });
 
-        return findPostalCodesDeferred.promise;
-      };
+  //       return findPostalCodesDeferred.promise;
+  //     };
 
-      this.getCapillaryWaves = function(postalCodes) {
-        var getCapillaryWavesDeferred = Q.defer();
+  //     this.getCapillaryWaves = function(postalCodes) {
+  //       var getCapillaryWavesDeferred = Q.defer();
 
-        var capillaryWavesCollection = [];
-        var getCapillary = (function(postalCode) {
-          var originPoint = new Point();
+  //       var capillaryWavesCollection = [];
 
-          originPoint.location = postalCode.loc.reverse();
-          originPoint.lat = originPoint.location[0];
-          originPoint.lon = originPoint.location[1];
+  //       var getCapillary = function(postalCode) {
+  //         var originPoint = new Point();
 
-          originPoint.capillaryWaves(waves, width, height, zoom)
-            .then(function(capillaryWaves) {
-              capillaryWavesCollection.push(capillaryWaves);
-              console.log(postalCodes.length);
-              if (postalCodes.length) {
-                getCapillary(postalCodes.shift());
-              } else {
-                getCapillaryWavesDeferred.resolve({
-                  postalCode: postalCode,
-                  capillaryWavesCollection: capillaryWavesCollection
-                });
-              }
-            });
-        })(postalCodes.shift());
+  //         originPoint.location = postalCode.loc.reverse();
+  //         originPoint.lat = originPoint.location[0];
+  //         originPoint.lon = originPoint.location[1];
 
-        return getCapillaryWavesDeferred.promise;
-      };
+  //         originPoint.capillaryWaves(waves, width, height, zoom)
+  //           .then(function(capillaryWaves) {
+  //             capillaryWavesCollection.push({
+  //               waves: capillaryWaves,
+  //               postalCode: postalCode
+  //             });
+  //             if (postalCodes.length) {
+  //               getCapillary(postalCodes.shift());
+  //             } else {
+  //               getCapillaryWavesDeferred.resolve(capillaryWavesCollection);
+  //             }
+  //           }).catch(function() {
+  //             console.log(arguments);
+  //           });
+  //       };
 
-      this.fillStatics = function(capillaryWavesCollection) {
-        var fillStaticsDeferred = Q.defer();
+  //       getCapillary(postalCodes.shift());
 
-        var staticPromises = [];
+  //       return getCapillaryWavesDeferred.promise;
+  //     };
 
-        capillaryWavesCollection.capillaryWavesCollection.forEach(function(capillaryWaves, capillaryWavesCollectionIndex) {
-          capillaryWaves.forEach(function(y, yIndex) {
-            y.forEach(function(x, xIndex) {
-              var static = new Static();
+  //     this.fillStatic = function(point) {
+  //       var fillStaticDeferred = Q.defer();
 
-              static.point = x;
-              static.width = width;
-              static.height = height;
-              static.zoom = zoom;
-              static.maptype = maptype;
+  //       var static = new Static();
 
-              capillaryWavesCollection.capillaryWavesCollection[capillaryWavesCollectionIndex][yIndex][xIndex] = static;
+  //       static.point = point;
+  //       static.width = width;
+  //       static.height = height;
+  //       static.zoom = zoom;
+  //       static.maptype = maptype;
 
-              staticPromises.push(static.getStatic().then(function(static) {
-                capillaryWavesCollection.capillaryWavesCollection[this.capillaryWavesCollectionIndex][this.yIndex][this.xIndex] = static;
-                return static;
-              }.bind({
-                capillaryWavesCollectionIndex: capillaryWavesCollectionIndex,
-                yIndex: yIndex,
-                xIndex: xIndex
-              })));
-            });
-          });
-        });
+  //       static.getStatic().then(function(static) {
+  //         fillStaticDeferred.resolve(static);
+  //       }).catch(function() {
+  //         var static = this.static;
+  //         static.save(function(err) {
+  //           if (err) {
+  //             fillStaticDeferred.reject(err);
+  //           } else {
+  //             fillStaticDeferred.resolve(static);
+  //           }
+  //         });
+  //       }.bind({
+  //         static: static
+  //       }));
 
-        var staticPromisesAfter = [];
-        Q.allSettled(staticPromises)
-          .then(function(resolves) {
-            resolves.forEach(function(resolve) {
-              if (resolve.state === 'fulfilled') {
-                var deferred = Q.defer();
+  //       return fillStaticDeferred.promise;
+  //     };
 
-                deferred.resolve(resolve.value);
+  //     this.montage = function(paths, filename) {
+  //       var montageDeferred = Q.defer();
 
-                staticPromisesAfter.push(deferred.promise);
-              } else {
-                staticPromisesAfter.push(Q.nbind(resolve.reason.save, resolve.reason)());
-              }
-            });
+  //       im.montage(paths.concat([
+  //         '-tile',
+  //         (waves * 2) + 'x' + (waves * 2),
+  //         '-geometry',
+  //         width + 'x' + height,
+  //         filename
+  //       ]), function() {
+  //         montageDeferred.resolve();
+  //       });
 
-            return Q.allSettled(staticPromisesAfter);
-          })
-          .then(function() {
-            fillStaticsDeferred.resolve(capillaryWavesCollection);
-          })
-          .catch(function() {
-            fillStaticsDeferred.reject.apply(this, arguments);
-          });
+  //       return montageDeferred.promise;
+  //     };
 
-        return fillStaticsDeferred.promise;
-      };
+  //     this.scale = function(filename) {
+  //       var scaleDeferred = Q.defer();
 
-      this.montage = function(paths, filename) {
-        var montageDeferred = Q.defer();
+  //       im.convert([
+  //         filename,
+  //         '-quality',
+  //         70,
+  //         '-scale',
+  //         'x70%',
+  //         filename
+  //       ], function() {
+  //         scaleDeferred.resolve();
+  //       });
 
-        im.montage(paths.concat([
-          '-tile',
-          (waves * 2) + 'x' + (waves * 2),
-          '-geometry',
-          width + 'x' + height,
-          filename
-        ]), function() {
-          montageDeferred.resolve();
-        });
+  //       return scaleDeferred.promise;
+  //     };
 
-        return montageDeferred.promise;
-      };
+  //     this.distort = function(filename) {
+  //       var distortDeferred = Q.defer();
 
-      this.scale = function(filename) {
-        var scaleDeferred = Q.defer();
+  //       var totalWidth = width * waves * 2,
+  //           totalHeight = height * waves * 2;
 
-        im.convert([
-          filename,
-          '-scale',
-          'x70%',
-          filename
-        ], function() {
-          scaleDeferred.resolve();
-        });
+  //       var params = [
+  //         filename,
+  //         '-matte',
+  //         '-virtual-pixel',
+  //         'transparent',
+  //         '-distort',
+  //         'Perspective "{left},{top} {newLeft},{top}   {left},{bottom} {left},{bottom}   {right},{bottom} {right},{bottom}    {right},{top} {newRight},{top}"'.assign({
+  //           left: 0,
+  //           top: 0,
+  //           newLeft: totalWidth * distortPercentage,
+  //           bottom: totalHeight,
+  //           right: totalWidth,
+  //           newRight: totalWidth - totalWidth * distortPercentage
+  //         }),
+  //         filename
+  //       ];
 
-        return scaleDeferred.promise;
-      };
+  //       im.convert(params, function() {
+  //         console.log(arguments);
+  //       });
 
-      this.distort = function(filename) {
-        var distortDeferred = Q.defer();
+  //       return distortDeferred.promise;
+  //     };
 
-        im.convert([
-          filename,
-          '-distort',
-          'Perspective',
-          '"' + (width * waves) + ',' + (height * waves) + '"',
-          filename
-        ], function() {
-          console.log(arguments);
-        });
+  //     var nplImagesFn = this;
 
-        return distortDeferred.promise;
-      };
+  //     this.findPostalCodes()
+  //       .then(function(postalCodes) {
+  //         return nplImagesFn.getCapillaryWaves(postalCodes);
+  //       })
+  //       .then(function(staticsCollection) {
+  //         var fillStaticsDeferred = Q.defer();
 
-      var nplImagesFn = this;
+  //         var shiftCollection = staticsCollection.slice(0);
 
-      this.findPostalCodes()
-        .then(function(postalCodes) {
-          return nplImagesFn.getCapillaryWaves(postalCodes);
-        })
-        .then(function(capillaryWavesCollection) {
-          return nplImagesFn.fillStatics(capillaryWavesCollection);
-        })
-        .then(function(staticsCollection) {
-          var promises = [];
-          staticsCollection.capillaryWavesCollection.forEach(function(statics) {
-            var paths = [];
+  //         var fillStatics = function(statics) {
+  //           console.log('fillStatics', shiftCollection.length);
 
-            statics.forEach(function(row) {
-              row.forEach(function(static) {
-                paths.push(static.path);
-              });
-            });
+  //           var promises = [];
 
-            var filename = global.TMP_DIR + '/' + staticsCollection.postalCode._id + '.jpg';
+  //           statics.waves.forEach(function(row, rowIndex) {
+  //             row.forEach(function(point, cellIndex) {
+  //               promises.push(nplImagesFn.fillStatic(point)
+  //                 .then(function(static) {
+  //                   staticsCollection[staticsCollection.length - shiftCollection.length - 1].waves[rowIndex][cellIndex] = static;
+  //                 })
+  //                 .catch(function() {
+  //                   console.log(arguments);
+  //                 }));
+  //             });
+  //           });
 
-            nplImagesFn.montage(paths, filename)
-              .then(function() {
-                return nplImagesFn.scale(filename);
-              })
-              .then(function() {
-                return nplImagesFn.distort(filename);
-              });
-          });
+  //           Q.allSettled(promises)
+  //             .then(function() {
+  //               if (shiftCollection.length) {
+  //                 fillStatics(shiftCollection.shift());
+  //               } else {
+  //                 fillStaticsDeferred.resolve(staticsCollection);
+  //               }
+  //             })
+  //             .catch(function() {
+  //               console.log(arguments);
+  //             });
+  //         };
 
-          return Q.allSettled(promises);
-        })
-        .then(function() {
+  //         fillStatics(shiftCollection.shift());
 
-        })
-        .catch(function() {
-          console.log(arguments);
-        });
+  //         return fillStaticsDeferred.promise;
+  //       })
+  //       .then(function(staticsCollection) {
+  //         var montageDeferred = Q.defer();
 
-    };
+  //         var shiftCollection = staticsCollection.slice(0);
 
-  })()
+  //         var montage = function(statics) {
+  //           console.log('montage', shiftCollection.length);
+  //           var paths = [];
+
+  //           statics.waves.forEach(function(row) {
+  //             row.forEach(function(static) {
+  //               paths.push(static.path);
+  //             });
+  //           });
+
+  //           var filename = global.TMP_DIR + '/postalcodes/' + statics.postalCode.postalCode + '.jpg';
+
+  //           nplImagesFn.montage(paths, filename).then(function() {
+  //             if (shiftCollection.length) {
+  //               montage(shiftCollection.shift());
+  //             } else {
+  //               montageDeferred.resolve(staticsCollection);
+  //             }
+  //           });
+  //         };
+
+  //         montage(shiftCollection.shift());
+
+  //         return montageDeferred.promise;
+  //       })
+  //       .then(function(staticsCollection) {
+  //         console.log('montages ready');
+  //         // var scaleDeferred = Q.defer();
+
+  //         // var shiftCollection = staticsCollection.slice(0);
+
+  //         // var scale = function(statics) {
+  //         //   console.log('scale', shiftCollection.length);
+  //         //   var paths = [];
+
+  //         //   statics.waves.forEach(function(row) {
+  //         //     row.forEach(function(static) {
+  //         //       paths.push(static.path);
+  //         //     });
+  //         //   });
+
+  //         //   var filename = global.TMP_DIR + '/postalcodes/' + statics.postalCode.postalCode + '.png';
+
+  //         //   nplImagesFn.scale(filename).then(function() {
+  //         //     if (shiftCollection.length) {
+  //         //       scale(shiftCollection.shift());
+  //         //     } else {
+  //         //       scaleDeferred.resolve(staticsCollection);
+  //         //     }
+  //         //   });
+  //         // };
+
+  //         // scale(shiftCollection.shift());
+
+  //         // return scaleDeferred.promise;
+  //       })
+  //       .then(function() {
+  //         console.log('done');
+  //       })
+  //       .catch(function() {
+  //         console.log(arguments);
+  //       });
+
+  //   };
+
+  // })()
 };
