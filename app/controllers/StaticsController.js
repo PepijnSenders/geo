@@ -1,6 +1,6 @@
 var Static = require(global.APP_DIR + '/models/Static'),
-Path = require(global.APP_DIR + '/models/Path'),
-request = require('request');
+		Path = require(global.APP_DIR + '/models/Path'),
+		request = require('request');
 
 module.exports = exports = {
 
@@ -18,13 +18,14 @@ module.exports = exports = {
 			});
 		}
 
-		console.log(params);
-
 		var sendResponse = function(status, static) {
 			if (params.json) {
 				res.status(status).send(static);
 			} else {
 				res.status(status);
+				res.writeHead(200, {
+					'Content-Type': 'image/jpg'
+				});
 				request.get(static.url).pipe(res);
 			}
 		};
