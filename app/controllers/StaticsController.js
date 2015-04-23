@@ -1,87 +1,89 @@
 var Static = require(global.APP_DIR + '/models/Static'),
-    Path = require(global.APP_DIR + '/models/Path'),
-    request = require('request');
+Path = require(global.APP_DIR + '/models/Path'),
+request = require('request');
 
 module.exports = exports = {
 
-  index: function(req, res) {
-    try {
-      var params = req.expects(Static.getDefaultParams({
-        json: {
-          type: 'boolean',
-          default: true
-        }
-      }));
-    } catch (errors) {
-      return res.status(400).send({
-        message: errors
-      });
-    }
+	index: function(req, res) {
+		try {
+			var params = req.expects(Static.getDefaultParams({
+				json: {
+					type: 'boolean',
+					default: true
+				}
+			}));
+		} catch (errors) {
+			return res.status(400).send({
+				message: errors
+			});
+		}
 
-    var sendResponse = function(status, static) {
-      if (params.json) {
-        res.status(status).send(static);
-      } else {
-        res.status(status);
-        request.get(static.url).pipe(res);
-      }
-    };
+		console.log(params);
 
-    var static = new Static(params);
-    static.point = req.points['center'];
-    static.getStatic()
-      .then(function(static) {
-        sendResponse(200, static);
-      })
-      .catch(function() {
-        static.save(function(err) {
-          sendResponse(201, static);
-        });
-      });
-  },
+		var sendResponse = function(status, static) {
+			if (params.json) {
+				res.status(status).send(static);
+			} else {
+				res.status(status);
+				request.get(static.url).pipe(res);
+			}
+		};
 
-  path: function(req, res) {
-    try {
-      var params = req.expects(Static.getDefaultParams({
-        debug: {
-          type: 'boolean',
-          default: false
-        },
-        adjacent: {
-          type: 'boolean',
-          default: 0
-        }
-      }));
-    } catch (errors) {
-      return res.status(400).send({
-        message: errors
-      });
-    }
+		var static = new Static(params);
+		static.point = req.points['center'];
+		static.getStatic()
+		.then(function(static) {
+			sendResponse(200, static);
+		})
+		.catch(function() {
+			static.save(function(err) {
+				sendResponse(201, static);
+			});
+		});
+	},
 
-    var path = new Path(params);
-    path.origin = req.points['origin'];
-    path.destination = req.points['destination'];
-    path.getPath()
-      .then(function() {
+	path: function(req, res) {
+		try {
+			var params = req.expects(Static.getDefaultParams({
+				debug: {
+					type: 'boolean',
+					default: false
+				},
+				adjacent: {
+					type: 'boolean',
+					default: 0
+				}
+			}));
+		} catch (errors) {
+			return res.status(400).send({
+				message: errors
+			});
+		}
 
-      })
-      .catch(function() {
-        path.buildPath()
-          .then(function() {
+		var path = new Path(params);
+		path.origin = req.points['origin'];
+		path.destination = req.points['destination'];
+		path.getPath()
+		.then(function() {
 
-          })
-          .catch(function() {
-            console.log(arguments);
-          });
-      });
-  },
+		})
+		.catch(function() {
+			path.buildPath()
+			.then(function() {
 
-  grid: function(req, res) {
+			})
+			.catch(function() {
+				console.log(arguments);
+			});
+		});
+	},
 
-  },
+	grid: function(req, res) {
 
-  zoom: function(req, res) {
+	},
 
-  }
+	zoom: function(req, res) {
+
+	}
 
 };

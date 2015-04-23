@@ -1,195 +1,195 @@
 var mongoose = require('mongoose'),
-    timestamps = require('mongoose-timestamp'),
-    Point = require(global.APP_DIR + '/models/Point'),
-    Q = require('q'),
-    Google = require(global.APP_DIR + '/libs/Google');
+timestamps = require('mongoose-timestamp'),
+Point = require(global.APP_DIR + '/models/Point'),
+Q = require('q'),
+Google = require(global.APP_DIR + '/libs/Google');
 
 var StaticSchema = new mongoose.Schema({
 
-  width: Number,
-  height: Number,
-  zoom: Number,
-  scale: Number,
-  maptype: String,
-  language: String,
-  region: String,
-  markers: String,
-  path: String,
-  visible: String,
-  style: String,
-  url: String,
-  path: String,
+	width: Number,
+	height: Number,
+	zoom: Number,
+	scale: Number,
+	maptype: String,
+	language: String,
+	region: String,
+	markers: String,
+	path: String,
+	visible: String,
+	style: String,
+	url: String,
+	path: String,
 
-  point: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Point'
-  }
+	point: {
+		type: mongoose.Schema.Types.ObjectId,
+		ref: 'Point'
+	}
 
 });
 
 StaticSchema.virtual('size').get(function() {
-  var offset = 60;
-  return this.width + 'x' + (this.height + offset * 2);
+	var offset = 60;
+	return this.width + 'x' + (this.height + offset * 2);
 });
 
 StaticSchema.virtual('realSize').get(function() {
-  var offset = 60;
-  return this.width + 'x' + this.height + '+0+30';
+	var offset = 60;
+	return this.width + 'x' + this.height + '+0+30';
 });
 
 StaticSchema.methods = (function() {
 
-  return {
+	return {
 
-    _getParameters: function() {
-      var params = {};
+		_getParameters: function() {
+			var params = {};
 
-      var keys = [
-        'width',
-        'height',
-        'zoom',
-        'scale',
-        'maptype',
-        'language',
-        'region',
-        'markers',
-        'path',
-        'visible',
-        'style',
-        'url',
-        'path',
-        'point'
-      ];
+			var keys = [
+			'width',
+			'height',
+			'zoom',
+			'scale',
+			'maptype',
+			'language',
+			'region',
+			'markers',
+			'path',
+			'visible',
+			'style',
+			'url',
+			'path',
+			'point'
+			];
 
-      var static = this;
+			var static = this;
 
-      keys.forEach(function(key) {
-        if (static[key]) {
-          params[key] = static[key];
-        }
-      });
+			keys.forEach(function(key) {
+				if (static[key]) {
+					params[key] = static[key];
+				}
+			});
 
-      return params;
-    },
+			return params;
+		},
 
-    getStatic: function() {
-      var getStaticDeferred = Q.defer();
+		getStatic: function() {
+			var getStaticDeferred = Q.defer();
 
-      var model = this;
+			var model = this;
 
-      mongoose.model('Static', StaticSchema)
-        .findOne(this._getParameters())
-        .populate('point').exec(function(err, static) {
-          if (static) {
-            getStaticDeferred.resolve(static);
-          } else {
-            getStaticDeferred.reject(model);
-          }
-        });
+			mongoose.model('Static', StaticSchema)
+			.findOne(this._getParameters())
+			.populate('point').exec(function(err, static) {
+				if (static) {
+					getStaticDeferred.resolve(static);
+				} else {
+					getStaticDeferred.reject(model);
+				}
+			});
 
-      return getStaticDeferred.promise;
-    },
+			return getStaticDeferred.promise;
+		},
 
-    staticmap: function() {
-      var staticmapDefer = Q.defer();
+		staticmap: function() {
+			var staticmapDefer = Q.defer();
 
-      var static = this;
+			var static = this;
 
-      Point.getPoint(this.point)
-        .then(function(point) {
-          console.log(point.location);
-          return Google.staticmap({
-            center: point.location.join(','),
-            size: static.size,
-            realSize: static.realSize,
-            width: static.width,
-            height: static.height,
-            zoom: static.zoom,
-            scale: static.scale,
-            maptype: static.maptype,
-            language: static.language,
-            region: static.region,
-            markers: static.markers,
-            path: static.path,
-            visible: static.visible,
-            style: static.style,
-            _id: static._id
-          });
-        })
-        .then(function(result) {
-          static.url = result.url;
-          static.path = result.path;
-          staticmapDefer.resolve(static);
-        })
-        .catch(function(err) {
-          staticmapDefer.reject(err);
-        });
+			Point.getPoint(this.point)
+			.then(function(point) {
+				console.log(point.location);
+				return Google.staticmap({
+					center: point.location.join(','),
+					size: static.size,
+					realSize: static.realSize,
+					width: static.width,
+					height: static.height,
+					zoom: static.zoom,
+					scale: static.scale,
+					maptype: static.maptype,
+					language: static.language,
+					region: static.region,
+					markers: static.markers,
+					path: static.path,
+					visible: static.visible,
+					style: static.style,
+					_id: static._id
+				});
+			})
+			.then(function(result) {
+				static.url = result.url;
+				static.path = result.path;
+				staticmapDefer.resolve(static);
+			})
+			.catch(function(err) {
+				staticmapDefer.reject(err);
+			});
 
-      return staticmapDefer.promise;
-    }
-  };
+			return staticmapDefer.promise;
+		}
+	};
 
 })();
 
 StaticSchema.statics = (function() {
 
-  return {
-    getDefaultParams: function(params) {
-      return Object.merge({
-        width: {
-          type: 'number',
-          default: 500
-        },
-        height: {
-          type: 'number',
-          default: 500
-        },
-        zoom: {
-          type: 'number',
-          default: 10
-        },
-        scale: {
-          type: 'number',
-          default: 1
-        },
-        maptype: {
-          type: 'string',
-          validations: 'regex:/roadmap|satellite|terrain|hybrid/',
-          default: 'roadmap'
-        },
-        language: {
-          type: 'string',
-          default: 'en'
-        },
-        region: {
-          type: 'string'
-        },
-        markers: {
-          type: 'string'
-        },
-        path: {
-          type: 'string'
-        },
-        visible: {
-          type: 'string'
-        },
-        style: {
-          type: 'string'
-        }
-      }, params);
-    }
-  };
+	return {
+		getDefaultParams: function(params) {
+			return Object.merge({
+				width: {
+					type: 'number',
+					default: 500
+				},
+				height: {
+					type: 'number',
+					default: 500
+				},
+				zoom: {
+					type: 'number',
+					default: 10
+				},
+				scale: {
+					type: 'number',
+					default: 1
+				},
+				maptype: {
+					type: 'string',
+					validations: 'regex:/roadmap|satellite|terrain|hybrid/',
+					default: 'roadmap'
+				},
+				language: {
+					type: 'string',
+					default: 'en'
+				},
+				region: {
+					type: 'string'
+				},
+				markers: {
+					type: 'string'
+				},
+				path: {
+					type: 'string'
+				},
+				visible: {
+					type: 'string'
+				},
+				style: {
+					type: 'string'
+				}
+			}, params);
+		}
+	};
 
 })();
 
 StaticSchema.pre('save', function(next) {
-  this.staticmap()
-    .then(function(static) {
-      next();
-    })
-    .catch(function() {
-      console.log(arguments);
-    });
+	this.staticmap()
+	.then(function(static) {
+		next();
+	})
+	.catch(function() {
+		console.log(arguments);
+	});
 });
 
 module.exports = exports = mongoose.model('Static', StaticSchema);
