@@ -92,36 +92,32 @@ PointSchema.methods = (function() {
 			var geometry = this.geometry(width, height, zoom);
 
 			var sideX = Math.abs(geometry.bounds.northWest.lon - geometry.bounds.northEast.lon),
-			sideY = Math.abs(geometry.bounds.northWest.lat - geometry.bounds.southWest.lat);
+					sideY = Math.abs(geometry.bounds.northWest.lat - geometry.bounds.southWest.lat);
 
 			α = Math.abs(α) % 360;
 			var αMax = Math.atan(sideY / sideX),
-			opposite, adjacent, lat, lon;
+					opposite, adjacent, lat, lon;
 
 			αMax = αMax.toDegrees();
 
-		 // Right side of tile
 			if (α < αMax || α >= (360 - αMax)) {
 				opposite = Math.tan(α.toRadians()) * sideX;
 				lat = this.lat + opposite;
 				lon = this.lon + sideX;
 			}
 
-			// Bottom side of tile
 			if ((180 - αMax) > α && α >= αMax) {
 				adjacent = sideY / Math.tan(α.toRadians());
 				lat = this.lat + sideY;
 				lon = this.lon + adjacent;
 			}
 
-			// Left side of tile
 			if ((180 + αMax) > α && α >= (180 - αMax)) {
 				opposite = 2 * (Math.tan(α.toRadians()) * (sideX / 2));
 				lat = this.lat + opposite;
 				lon = this.lon - sideX;
 			}
 
-			// Top side of tile
 			if ((360 - αMax) > α && α >= (180 + αMax)) {
 				adjacent = sideY / Math.tan(α.toRadians());
 				lat = this.lat - sideY;
@@ -132,6 +128,7 @@ PointSchema.methods = (function() {
 				lat: lat,
 				lon: lon
 			});
+
 			adjacentPoint.angle = α;
 
 			return adjacentPoint;
@@ -345,6 +342,56 @@ PointSchema.methods = (function() {
 			});
 
 			return getPointDeferred.promise;
+		},
+
+		isInside: function(point, width, height, zoom) {
+			var geometry = this.geometry(width, height, zoom);
+
+			return geometry.quarters.west < point.lon &&
+			point.lon <= geometry.quarters.east &&
+			geometry.quarters.south < point.lat &&
+			point.lat <= geometry.quarters.north;
+		},
+
+		pixelLocation: function(point, tileWidth, tileHeight) {
+			var leftDistance = this.distanceTo(new Point({
+				lat: this.lat,
+				lon: point.geometry.quarters.west
+			}));
+			var rightDistance = this.distanceTo(new Point({
+				lat: this.lat,
+				lon: point.geometry.quarters.east
+			}));
+			var topDistance = this.distanceTo(new Point({
+				lat: point.geometry.quarters.north,
+				lon: this.lon
+			}));
+			var bottomDistance = this.distanceTo(new Point({
+				lat: point.geometry.quarters.south,
+				lon: this.lon
+			}));
+
+			var Δx = new Point({
+				lat: this.lat,
+				lon: point.geometry.quarters.west
+			}).distanceTo(new Point({
+				lat: this.lat,
+				lon: point.geometry.quarters.east
+			}));
+			var Δy = new Point({
+				lat: point.geometry.quarters.north,
+				lon: this.lon
+			}).distanceTo(new Point({
+				lat: point.geometry.quarters.south,
+				lon: this.lon
+			}));
+
+			return {
+				left: tileWidth * (leftDistance / Δx),
+				right: tileWidth * (rightDistance / Δx),
+				top: tileHeight * (topDistance / Δy),
+				bottom: tileHeight * (bottomDistance / Δy)
+			};
 		}
 
 	};

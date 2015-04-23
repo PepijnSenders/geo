@@ -64,7 +64,6 @@ module.exports = exports = (function() {
 				url: url.format(this.buildUrl(_bases['staticmap'], options)),
 				_id: _id
 			}).then(function(tmpPath) {
-				console.log(options);
 				return Google.cropImage({
 					path: tmpPath,
 					realSize: options.realSize
