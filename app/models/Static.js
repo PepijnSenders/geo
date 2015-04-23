@@ -34,7 +34,7 @@ StaticSchema.virtual('size').get(function() {
 
 StaticSchema.virtual('realSize').get(function() {
 	var offset = 60;
-	return this.width + 'x' + this.height + '+0+30';
+	return this.width + 'x' + this.height + '+0+0';
 });
 
 StaticSchema.methods = (function() {
@@ -45,20 +45,20 @@ StaticSchema.methods = (function() {
 			var params = {};
 
 			var keys = [
-			'width',
-			'height',
-			'zoom',
-			'scale',
-			'maptype',
-			'language',
-			'region',
-			'markers',
-			'path',
-			'visible',
-			'style',
-			'url',
-			'path',
-			'point'
+				'width',
+				'height',
+				'zoom',
+				'scale',
+				'maptype',
+				'language',
+				'region',
+				'markers',
+				'path',
+				'visible',
+				'style',
+				'url',
+				'path',
+				'point'
 			];
 
 			var static = this;
@@ -97,7 +97,6 @@ StaticSchema.methods = (function() {
 
 			Point.getPoint(this.point)
 			.then(function(point) {
-				console.log(point.location);
 				return Google.staticmap({
 					center: point.location.join(','),
 					size: static.size,

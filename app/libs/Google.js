@@ -1,182 +1,178 @@
 module.exports = exports = (function() {
 
-  var url = require('url'),
-      request = require('request'),
-      im = require('imagemagick'),
-      aws = require(global.APP_DIR + '/libs/aws'),
-      Q = require('q'),
-      config = require(global.APP_DIR + '/config')
-      GoogleCache = require(global.APP_DIR + '/models/GoogleCache'),
-      fs = require('fs'),
-      path = require('path'),
-      uniqid = require('uniqid');
+	var url = require('url'),
+	request = require('request'),
+	im = require('imagemagick'),
+	aws = require(global.APP_DIR + '/libs/aws'),
+	Q = require('q'),
+	config = require(global.APP_DIR + '/config')
+	GoogleCache = require(global.APP_DIR + '/models/GoogleCache'),
+	fs = require('fs'),
+	path = require('path'),
+	uniqid = require('uniqid');
 
-  var _bases = {
-    'staticmap': 'https://maps.googleapis.com/maps/api/staticmap',
-    'geocode': 'https://maps.googleapis.com/maps/api/geocode/json',
-    'streetview': 'https://maps.googleapis.com/maps/api/streetview'
-  };
+	var _bases = {
+		'staticmap': 'https://maps.googleapis.com/maps/api/staticmap',
+		'geocode': 'https://maps.googleapis.com/maps/api/geocode/json',
+		'streetview': 'https://maps.googleapis.com/maps/api/streetview'
+	};
 
-  var Google = {
+	var Google = {
 
-    downloadImage: function(options) {
-      var downloadImageDeferred = Q.defer();
+		downloadImage: function(options) {
+			var downloadImageDeferred = Q.defer();
 
-      var tmpPath = global.TMP_DIR + '/statics/' + options._id + '.png';
-      var stream = fs.createWriteStream(tmpPath);
+			var tmpPath = global.TMP_DIR + '/statics/' + options._id + '.png';
+			var stream = fs.createWriteStream(tmpPath);
 
-      request(options.url, function(err, response, body) {
-        if (body.length < 1000) {
-          console.log(body);
-        }
-      }).pipe(stream);
+			request(options.url).pipe(stream);
 
-      stream.on('close', function() {
-        downloadImageDeferred.resolve(tmpPath);
-      });
+			stream.on('close', function() {
+				downloadImageDeferred.resolve(tmpPath);
+			});
 
-      return downloadImageDeferred.promise;
-    },
+			return downloadImageDeferred.promise;
+		},
 
-    cropImage: function(options) {
-      var cropImageDeferred = Q.defer();
+		cropImage: function(options) {
+			var cropImageDeferred = Q.defer();
 
-      im.convert([
-        '-gravity',
-        'Center',
-        options.path,
-        '-crop',
-        options.realSize,
-        options.path
-      ], function(err, stdout) {
-        if (err) {
-          console.log(err, stdout);
-          return cropImageDeferred.reject(err);
-        }
-        cropImageDeferred.resolve(options.path);
-      });
+			im.convert([
+				'-gravity',
+				'Center',
+				options.path,
+				'-crop',
+				options.realSize,
+				options.path
+				], function(err, stdout) {
+					if (err) {
+						console.log(err, stdout);
+						return cropImageDeferred.reject(err);
+					}
+					cropImageDeferred.resolve(options.path);
+				});
 
-      return cropImageDeferred.promise;
-    },
+			return cropImageDeferred.promise;
+		},
 
-    staticmap: function(options) {
-      var staticmapDefer = Q.defer();
+		staticmap: function(options) {
+			var staticmapDefer = Q.defer();
 
-      var _id = options._id;
+			var _id = options._id;
 
-      this.downloadImage({
-        url: url.format(this.buildUrl(_bases['staticmap'], options)),
-        _id: _id
-      }).then(function(tmpPath) {
-        return Google.cropImage({
-          path: tmpPath,
-          realSize: options.realSize
-        });
-      }).then(function(tmpPath) {
-        return aws.uploadFile(tmpPath);
-      }).then(function(options) {
-        staticmapDefer.resolve(options);
-      }).catch(function(err) {
-        staticmapDefer.reject(err);
-      });
+			this.downloadImage({
+				url: url.format(this.buildUrl(_bases['staticmap'], options)),
+				_id: _id
+			}).then(function(tmpPath) {
+				console.log(options);
+				return Google.cropImage({
+					path: tmpPath,
+					realSize: options.realSize
+				});
+			}).then(function(tmpPath) {
+				return aws.uploadFile(tmpPath);
+			}).then(function(options) {
+				staticmapDefer.resolve(options);
+			}).catch(function(err) {
+				staticmapDefer.reject(err);
+			});
 
-      return staticmapDefer.promise;
-    },
+			return staticmapDefer.promise;
+		},
 
-    geocode: function(options) {
-      var geocodeDeferred = Q.defer();
+		geocode: function(options) {
+			var geocodeDeferred = Q.defer();
 
-      this.request(_bases['geocode'], {
-        address: options.address,
-        components: options.components,
-        bounds: options.bounds,
-        language: options.language,
-        region: options.region
-      }).then(function(result) {
-        if (result.status === 'OK' && result.results.length > 0) {
-          geocodeDeferred.resolve(result.results[0]);
-        } else {
-          geocodeDeferred.reject('Address not resolved');
-        }
-      }).catch(function(err) {
-        geocodeDeferred.reject(err);
-      });
+			this.request(_bases['geocode'], {
+				address: options.address,
+				components: options.components,
+				bounds: options.bounds,
+				language: options.language,
+				region: options.region
+			}).then(function(result) {
+				if (result.status === 'OK' && result.results.length > 0) {
+					geocodeDeferred.resolve(result.results[0]);
+				} else {
+					geocodeDeferred.reject('Address not resolved');
+				}
+			}).catch(function(err) {
+				geocodeDeferred.reject(err);
+			});
 
-      return geocodeDeferred.promise;
-    },
+			return geocodeDeferred.promise;
+		},
 
-    getCached: function(service, query) {
-      var getCachedDeferred = Q.defer();
+		getCached: function(service, query) {
+			var getCachedDeferred = Q.defer();
 
-      GoogleCache.findOne({
-        service: service,
-        query: query
-      }, function(err, document) {
-        if (document) {
-          getCachedDeferred.resolve(document);
-        } else {
-          getCachedDeferred.reject(err ? err : null);
-        }
-      });
+			GoogleCache.findOne({
+				service: service,
+				query: query
+			}, function(err, document) {
+				if (document) {
+					getCachedDeferred.resolve(document);
+				} else {
+					getCachedDeferred.reject(err ? err : null);
+				}
+			});
 
-      return getCachedDeferred.promise;
-    },
+			return getCachedDeferred.promise;
+		},
 
-    buildUrl: function(base, query) {
-      var requestUrl = url.parse(base);
+		buildUrl: function(base, query) {
+			var requestUrl = url.parse(base);
 
-      requestUrl.query = query;
-      requestUrl.query.key = config.get('google.key');
+			requestUrl.query = query;
+			requestUrl.query.key = config.get('google.key');
 
-      return requestUrl;
-    },
+			return requestUrl;
+		},
 
-    request: function(base, query) {
-      var requestDeferred = Q.defer();
+		request: function(base, query) {
+			var requestDeferred = Q.defer();
 
-      var requestUrl = this.buildUrl(base, query);
+			var requestUrl = this.buildUrl(base, query);
 
-      var service = base,
-          query = JSON.stringify(requestUrl.query);
+			var service = base,
+			query = JSON.stringify(requestUrl.query);
 
-      this.getCached(service, query).then(function(document) {
-        requestDeferred.resolve(document.result);
-      }).catch(function() {
-        request(url.format(requestUrl), function(err, response, body) {
-          if (err) {
-            return requestDeferred.reject(err);
-          }
+			this.getCached(service, query).then(function(document) {
+				requestDeferred.resolve(document.result);
+			}).catch(function() {
+				request(url.format(requestUrl), function(err, response, body) {
+					if (err) {
+						return requestDeferred.reject(err);
+					}
 
-          try {
-            body = JSON.parse(body);
-          } catch(err) {
-            // Image response
-            return requestDeferred.resolve(body);
-          }
+					try {
+						body = JSON.parse(body);
+					} catch(err) {
+						return requestDeferred.resolve(body);
+					}
 
-          if (!body.results.length) {
-            return requestDeferred.reject(body.status);
-          }
+					if (!body.results.length) {
+						return requestDeferred.reject(body.status);
+					}
 
-          var googleCache = new GoogleCache();
-          googleCache.service = service;
-          googleCache.query = query;
-          googleCache.result = body;
+					var googleCache = new GoogleCache();
+					googleCache.service = service;
+					googleCache.query = query;
+					googleCache.result = body;
 
-          googleCache.save(function(err) {
-            if (err) {
-              return requestDeferred.reject(err);
-            }
-            requestDeferred.resolve(googleCache.result);
-          });
-        });
-      });
+					googleCache.save(function(err) {
+						if (err) {
+							return requestDeferred.reject(err);
+						}
+						requestDeferred.resolve(googleCache.result);
+					});
+				});
+			});
 
-      return requestDeferred.promise;
-    }
+			return requestDeferred.promise;
+		}
 
-  };
+	};
 
-  return Google;
+	return Google;
 
 })();

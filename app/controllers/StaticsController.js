@@ -24,7 +24,7 @@ module.exports = exports = {
 			} else {
 				res.status(status);
 				res.writeHead(200, {
-					'Content-Type': 'image/jpg'
+					'Content-Type': 'image/png'
 				});
 				request.get(static.url).pipe(res);
 			}
